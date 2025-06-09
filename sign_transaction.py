@@ -15,4 +15,4 @@ unsigned_transaction = { "time":time_now,"sender":public_key_A_str,"receiver":pu
 signature = secret_key_A.sign(json.dumps(unsigned_transaction).encode('utf-8'))
 transaction = {"time":time_now,"sender":public_key_A_str,"receiver":public_key_B_str,"amount":3,"signature":signature.hex()}
 
-pd.to_pickle(transaction,"transaction.pkl")
+pd.to_pickle(transaction,"signed_transaction.pkl")
