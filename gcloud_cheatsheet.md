@@ -2,6 +2,10 @@
 
 このファイルは、GCPの操作でよく使う`gcloud`コマンドをまとめたものです。
 
+> **【重要】**
+> コマンド例の中にある `[PROJECT_ID]` や `[INSTANCE_NAME]` のような角括弧 `[]` は、**「ここにあなたの情報を入力してください」** という意味のプレースホルダーです。
+> 実際のコマンドでは、**角括弧は入力せず**、あなたのプロジェクトIDやインスタンス名に置き換えてください。
+
 ---
 
 ## 1. 初期設定 & 認証
@@ -51,16 +55,16 @@ gcloud compute instances list
 **目的**: VMインスタンスを起動または停止します。
 ```bash
 # 起動
-gcloud compute instances start [INSTANCE_NAME] --zone=[ZONE]
+gcloud compute instances start [INSTANCE_NAME] --zone [ZONE]
 
 # 停止
-gcloud compute instances stop [INSTANCE_NAME] --zone=[ZONE]
+gcloud compute instances stop [INSTANCE_NAME] --zone [ZONE]
 ```
 
 ### `gcloud compute instances describe`
 **目的**: VMインスタンスの詳細情報（IPアドレス、マシンタイプなど）を表示します。
 ```bash
-gcloud compute instances describe [INSTANCE_NAME] --zone=[ZONE]
+gcloud compute instances describe [INSTANCE_NAME] --zone [ZONE]
 ```
 
 ---
@@ -70,17 +74,17 @@ gcloud compute instances describe [INSTANCE_NAME] --zone=[ZONE]
 ### `gcloud compute ssh`
 **目的**: VMインスタンスにSSHで接続します。
 ```bash
-gcloud compute ssh [INSTANCE_NAME] --zone=[ZONE]
+gcloud compute ssh [INSTANCE_NAME] --zone [ZONE]
 ```
 
 ### `gcloud compute scp`
 **目的**: ローカルPCとVMインスタンス間でファイルを安全にコピーします。
 ```bash
 # ローカル → VM
-gcloud compute scp [LOCAL_FILE_PATH] [INSTANCE_NAME]:~/[REMOTE_FILE_NAME] --zone=[ZONE]
+gcloud compute scp [LOCAL_FILE_PATH] [INSTANCE_NAME]:~/[REMOTE_FILE_NAME] --zone [ZONE]
 
 # VM → ローカル
-gcloud compute scp [INSTANCE_NAME]:~/[REMOTE_FILE_NAME] [LOCAL_FILE_PATH] --zone=[ZONE]
+gcloud compute scp [INSTANCE_NAME]:~/[REMOTE_FILE_NAME] [LOCAL_FILE_PATH] --zone [ZONE]
 ```
 > `~` はVMのホームディレクトリを意味します。
 
@@ -110,5 +114,5 @@ gcloud compute firewall-rules create allow-port-8000 \
 
 ### 特定のVMのIPアドレスだけを取得
 ```bash
-gcloud compute instances describe [INSTANCE_NAME] --format='get(networkInterfaces[0].accessConfigs[0].natIP)' --zone=[ZONE]
+gcloud compute instances describe [INSTANCE_NAME] --format='get(networkInterfaces[0].accessConfigs[0].natIP)' --zone [ZONE]
 ``` 
