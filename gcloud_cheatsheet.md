@@ -88,7 +88,18 @@ gcloud compute scp [INSTANCE_NAME]:~/[REMOTE_FILE_NAME] [LOCAL_FILE_PATH] --zone
 ```
 > `~` はVMのホームディレクトリを意味します。
 
+### gcloud compute scp blockchain.py bc1:/home/kannd/blockchain/ 
+### --zone=us-central1-c
+### gcloud compute scp fast_api.py bc1:/home/kannd/blockchain/ 
+### --zone=us-central1-c
+### gcloud compute scp requirements.txt bc1:/home/kannd/blockchain/ 
+### --zone=us-central1-c
+### gcloud compute scp transaction.py bc1:/home/kannd/blockchain/ 
+### --zone=us-central1-c
+### gcloud compute scp signature.py bc1:/home/kannd/blockchain/ --zone=us-central1-c
 ---
+
+## プロジェクトファイルはblockchain
 
 ## 4. ファイアウォールルール
 
