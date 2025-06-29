@@ -13,19 +13,20 @@ BLOCKCHAIN_FILE = "./blockchain_data.pkl"
 
 class Blockchain:
     def __init__(self):
-        self.transacton_pool = {"transactions": []}
+        self.transaction_pool = {"transactions": []}
         self.chain = {"blocks": []}
         self.first_block = {
             "time": "0000-00T00:00:00.000000+00:00",
             "transactions": [],
             "hash": "SimplestBlockChain",
+            "previous_hash": None,
             "nonce": 0,
         }
         self.chain["blocks"].append(self.first_block)
         self.all_block_transaction = []
 
     def save_transaction_pool(self):
-        pd.to_pickle(self.transacton_pool, TRANSACTION_FILE)
+        pd.to_pickle(self.transaction_pool, TRANSACTION_FILE)
 
     def load_transaction_pool(self):
         if os.path.exists(TRANSACTION_FILE):
@@ -36,7 +37,7 @@ class Blockchain:
 
     def add_transaction(self, transaction):
         if self.verify_transaction(transaction):
-            self.transacton_pool["transactions"].append(transaction)
+            self.transaction_pool["transactions"].append(transaction)
             return True
         else:
             return False
@@ -85,6 +86,7 @@ class Blockchain:
         all_block_transactions = []
         for i in range(len(chain["blocks"])):
             block = chain["blocks"][i]
+            
             if i == 0:
                 if block != self.first_block:
                     return False
@@ -92,37 +94,44 @@ class Blockchain:
                 previous_block = chain["blocks"][i-1]
                 if block["hash"] != self.hash(previous_block):
                     return False
+                    
                 block_without_time = {
                     "transactions": block["transactions"],
                     "hash": block["hash"],
                     "nonce": block["nonce"],
                 }
-                if format(int(self.hash(block_without_time), 16), '0256b')[-POW_DIFFICULTY:] != '0' * POW_DIFFICULTY:
+                block_hash = self.hash(block_without_time)
+                binary_hash = format(int(block_hash, 16), '0256b')
+                suffix = binary_hash[-POW_DIFFICULTY:]
+                required_suffix = '0' * POW_DIFFICULTY
+                
+                if suffix != required_suffix:
                     return False
-                reward_trans_fig = False
-                for transaction in block["transactions"]:
-                    if transaction["sender"] == "Blockchain":
-                        if not reward_trans_fig:
-                            reward_trans_fig = True
-                        else:
-                            return False
-                        if transaction["amount"] != REWARD_AMOUNT:
-                            return False
-                    else:
-                        if self.verify_transaction(transaction) == False:
-                            return False
-                    if transaction not in all_block_transactions:
-                        all_block_transactions.append(transaction)
+                    
+            reward_trans_fig = False
+            for transaction in block["transactions"]:
+                if transaction["sender"] == "Blockchain":
+                    if not reward_trans_fig:
+                        reward_trans_fig = True
                     else:
                         return False
+                    if transaction["amount"] != REWARD_AMOUNT:
+                        return False
+                else:
+                    if self.verify_transaction(transaction) == False:
+                        return False
+                if transaction not in all_block_transactions:
+                    all_block_transactions.append(transaction)
+                else:
+                    return False
         return True
 
     def replace_chain(self, chain):
         self.chain = chain
         self.set_all_block_transactions()
         for transaction in self.all_block_transaction:
-            if transaction in self.transacttion_pool["transactions"]:
-                self.transacttion_pool["transactions"].remove(transaction)
+            if transaction in self.transaction_pool["transactions"]:
+                self.transaction_pool["transactions"].remove(transaction)
     
     def create_new_block(self, miner):
         reward_transaction = {
@@ -132,7 +141,7 @@ class Blockchain:
             "amount":REWARD_AMOUNT,
             "signature":"none"
         }
-        transaction = self.transacton_pool["transactions"].copy()
+        transaction = self.transaction_pool["transactions"].copy()
         transaction.append(reward_transaction)
         last_block = self.chain["blocks"][-1]
         hash = self.hash(last_block)
