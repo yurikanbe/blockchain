@@ -124,6 +124,9 @@ class Blockchain:
                     all_block_transactions.append(transaction)
                 else:
                     return False
+                if all_block_transactions != []:
+                    if min(self.account_calc(all_block_transactions).values()) < 0:
+                        return False
         return True
 
     def replace_chain(self, chain):
@@ -159,3 +162,20 @@ class Blockchain:
             "nonce":block_without_time["nonce"],
         }
         self.chain["blocks"].append(block)
+
+
+    def account_calc(self,transactions):
+        accounts={}
+        transactions_copy = transactions.copy()
+        for transaction in transactions_copy:
+            # sender側の計算（Blockchainの場合はスキップ）
+            if transaction["sender"] != "Blockchain":
+                if transaction["sender"] not in accounts:
+                    accounts[transaction["sender"]] = int(0)
+                accounts[transaction["sender"]] -= int(transaction["amount"])
+            
+            # receiver側の計算（すべてのトランザクションで実行）
+            if transaction["receiver"] not in accounts:
+                accounts[transaction["receiver"]] = int(0)
+            accounts[transaction["receiver"]] += int(transaction["amount"])
+        return accounts

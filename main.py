@@ -64,7 +64,8 @@ def post_chain(chain: Chain):
         blockchain.save_blockchain()
         blockchain.save_transaction_pool()
         return {"message":"Chain is posted."}
-    
+    else:
+        return {"message":"Chain verification failed."}
 
 if __name__=="__main__":
     uvicorn.run("main:app",host="127.0.0.1",port=8000)
