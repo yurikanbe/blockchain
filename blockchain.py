@@ -5,6 +5,9 @@ import pandas as pd
 import os
 import hashlib
 from datetime import datetime, timezone
+import node_list
+import requests 
+from concurrent.futures import ThreadPoolExecutor
 
 POW_DIFFICULTY = 10
 REWARD_AMOUNT = 256
@@ -24,6 +27,7 @@ class Blockchain:
         }
         self.chain["blocks"].append(self.first_block)
         self.all_block_transaction = []
+        self.my_address = ""
 
     def save_transaction_pool(self):
         pd.to_pickle(self.transaction_pool, TRANSACTION_FILE)
@@ -179,3 +183,18 @@ class Blockchain:
                 accounts[transaction["receiver"]] = int(0)
             accounts[transaction["receiver"]] += int(transaction["amount"])
         return accounts
+    
+    def get_my_address(self):
+        try:
+            # 汎用的な外部サービスを使用（AWS/GCP/ローカル全対応）
+            response = requests.get("https://api.ipify.org", timeout=5)
+            self.my_address = response.text
+        except:
+            # エラー時はローカルホストにフォールバック
+            self.my_address = "127.0.0.1"
+
+    def broadcast_transaction(self,transaction):
+        with ThreadPoolExecutor() as executor:
+            for url in node_list.node_list:
+                if url != self.my_address:
+                    executor.submit(requests.post,f"http://{url}:8000/receive_tranaction",json.dumps(transaction))

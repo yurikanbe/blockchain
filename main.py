@@ -32,6 +32,8 @@ blockchain=blockchain.Blockchain()
 blockchain.transaction_pool = blockchain.load_transaction_pool()
 blockchain.chain = blockchain.load_blockchain()
 blockchain.set_all_block_transactions()
+blockchain.get_my_address()
+blockchain.set_all_block_transaction()
 app=FastAPI()
 
 
@@ -45,8 +47,16 @@ def post_transaction_pool(transaction: Transaction):
     if blockchain.verify_transaction(transaction_dict):
         if blockchain.add_transaction(transaction_dict):
             blockchain.save_transaction_pool()
+            blockchain.broadcast_transaction(transaction_dict)
             return {"message": "Transaction is posted."}
-    return {"message": "Transaction verification failed."}
+
+@app.post("/receive_tranaction")
+def receive_transaction(transaction :Transaction):
+    transaction_dict = transaction.dict()
+    if blockchain.verify_transaction(transaction_dict):
+        if blockchain.add_transaction(transaction_dict):
+            blockchain.save_transaction_pool()
+            return{"massage":"Transaction is received."}
 
 @app.get("/chain")
 def get_chain():
@@ -68,4 +78,4 @@ def post_chain(chain: Chain):
         return {"message":"Chain verification failed."}
 
 if __name__=="__main__":
-    uvicorn.run("main:app",host="127.0.0.1",port=8000)
+    uvicorn.run("main:app",host="0.0.0.0",port=8000)
