@@ -29,4 +29,15 @@ gcloud compute scp transaction.py bc-2:/home/n6321/projects/blockchain/ --zone u
 gcloud compute scp signed_transaction.pkl bc-2:/home/n6321/projects/blockchain/ --zone us-central1-c
 
 
+利用可能なユーザーを確認
+cat /etc/passwd | grep /bin/bash
 
+
+ユーザーを切り替える
+# 既存のユーザーに切り替え
+sudo su - [ユーザー名]
+
+# 例
+sudo su - n6321
+
+ssss
