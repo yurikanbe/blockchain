@@ -19,7 +19,7 @@ if __name__=="__main__":
     res = http_get("http://"+ip_address+":8000/chain")
     chain_dict = res.json()
     blockchain.chain = chain_dict
-    blockchain.set_all_block_transactions()
+    blockchain.set_all_block_transaction()
 
     res = http_get("http://"+ip_address+":8000/transaction_pool")
     transaction_dict = res.json()

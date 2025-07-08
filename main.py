@@ -31,9 +31,8 @@ class Chain(BaseModel):
 blockchain=blockchain.Blockchain()
 blockchain.transaction_pool = blockchain.load_transaction_pool()
 blockchain.chain = blockchain.load_blockchain()
-blockchain.set_all_block_transactions()
-blockchain.get_my_address()
 blockchain.set_all_block_transaction()
+blockchain.get_my_address()
 app=FastAPI()
 
 
@@ -50,13 +49,13 @@ def post_transaction_pool(transaction: Transaction):
             blockchain.broadcast_transaction(transaction_dict)
             return {"message": "Transaction is posted."}
 
-@app.post("/receive_tranaction")
+@app.post("/receive_transaction")
 def receive_transaction(transaction :Transaction):
     transaction_dict = transaction.dict()
     if blockchain.verify_transaction(transaction_dict):
         if blockchain.add_transaction(transaction_dict):
             blockchain.save_transaction_pool()
-            return{"massage":"Transaction is received."}
+            return{"message":"Transaction is received."}
 
 @app.get("/chain")
 def get_chain():

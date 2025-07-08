@@ -7,7 +7,7 @@ try:
     response = requests.get("http://127.0.0.1:8000/chain")
     if response.status_code == 200:
         blockchain_instance.chain = response.json()
-        blockchain_instance.set_all_block_transactions()
+        blockchain_instance.set_all_block_transaction()
         print(blockchain_instance.account_calc(blockchain_instance.all_block_transaction))
     else:
         print(f"APIサーバーからのレスポンスエラー: {response.status_code}")

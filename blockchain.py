@@ -67,7 +67,7 @@ class Blockchain:
         hash = hashlib.sha256(json.dumps(block).encode('utf-8')).hexdigest()
         return hash
 
-    def set_all_block_transactions(self):
+    def set_all_block_transaction(self):
         self.all_block_transaction = []
         for i in range(len(self.chain["blocks"])):
             block = self.chain["blocks"][i]
@@ -135,7 +135,7 @@ class Blockchain:
 
     def replace_chain(self, chain):
         self.chain = chain
-        self.set_all_block_transactions()
+        self.set_all_block_transaction()
         for transaction in self.all_block_transaction:
             if transaction in self.transaction_pool["transactions"]:
                 self.transaction_pool["transactions"].remove(transaction)
@@ -185,16 +185,12 @@ class Blockchain:
         return accounts
     
     def get_my_address(self):
-        try:
-            # 汎用的な外部サービスを使用（AWS/GCP/ローカル全対応）
-            response = requests.get("https://api.ipify.org", timeout=5)
-            self.my_address = response.text
-        except:
-            # エラー時はローカルホストにフォールバック
-            self.my_address = "127.0.0.1"
+        headers = {'Metadata-Flavor': 'Google'}
+        self.my_address = requests.get("http://metadata.google.internal/computeMetadata/v1/instance/network-interfaces/0/access-configs/0/external-ip", headers=headers).text
 
-    def broadcast_transaction(self,transaction):
+    def broadcast_transaction(self, transaction):
         with ThreadPoolExecutor() as executor:
             for url in node_list.node_list:
                 if url != self.my_address:
-                    executor.submit(requests.post,f"http://{url}:8000/receive_tranaction",json.dumps(transaction))
+                    executor.submit(requests.post,
+                    "http://"+url+":8000/receive_transaction", json.dumps(transaction))

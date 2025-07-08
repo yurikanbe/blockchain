@@ -20,7 +20,7 @@ unsigned_transaction={"time":time_now,"sender":public_key_sender_str,"receiver":
 signature=secret_key_sender.sign(json.dumps(unsigned_transaction).encode('utf-8'))
 transaction={"time":time_now,"sender":public_key_sender_str,"receiver":public_key_receiver_str,"amount":coin_num,"signature":signature.hex()}
 
-res=requests.post("http://127.0.0.1:8000/transaction_pool",json.dumps(transaction))
+res=requests.post("http://34.9.206.180:8000/transaction_pool",json.dumps(transaction))
 print(res.text)
 
 pd.to_pickle(transaction,"signed_transaction.pkl")

@@ -11,22 +11,51 @@ gcloud compute ssh bc-1 --zone=us-central1-c --ssh-flag="-L 8000:localhost:8000"
 なんかろーかるのPCにポートフォワーディングしてる
 ポートワーディングとは、ローカルPCの8000番ポートをgcpのbc-1の8000番ポートに転送すること
 
-# ファイルを転送bc-1
-gcloud compute scp fast_api.py bc-1:/home/n6321/projects/blockchain/ --zone us-central1-c
+# ファイルを転送bc-1（pklファイルと個人の完璧メモを除く）
 gcloud compute scp blockchain.py bc-1:/home/n6321/projects/blockchain/ --zone us-central1-c
-gcloud compute scp requirements.txt bc-1:/home/n6321/projects/blockchain/ --zone us-central1-c
+gcloud compute scp fast_api.py bc-1:/home/n6321/projects/blockchain/ --zone us-central1-c
 gcloud compute scp main.py bc-1:/home/n6321/projects/blockchain/ --zone us-central1-c
 gcloud compute scp transaction.py bc-1:/home/n6321/projects/blockchain/ --zone us-central1-c
-gcloud compute scp signed_transaction.pkl bc-1:/home/n6321/projects/blockchain/ --zone us-central1-c
+gcloud compute scp requirements.txt bc-1:/home/n6321/projects/blockchain/ --zone us-central1-c
+gcloud compute scp get_transactions.py bc-1:/home/n6321/projects/blockchain/ --zone us-central1-c
+gcloud compute scp hash_test.py bc-1:/home/n6321/projects/blockchain/ --zone us-central1-c
+gcloud compute scp mining.py bc-1:/home/n6321/projects/blockchain/ --zone us-central1-c
+gcloud compute scp node_list.py bc-1:/home/n6321/projects/blockchain/ --zone us-central1-c
+gcloud compute scp post_transaction.py bc-1:/home/n6321/projects/blockchain/ --zone us-central1-c
+gcloud compute scp reuse_transactions.py bc-1:/home/n6321/projects/blockchain/ --zone us-central1-c
+gcloud compute scp show_accounts.py bc-1:/home/n6321/projects/blockchain/ --zone us-central1-c
+gcloud compute scp sign_transaction.py bc-1:/home/n6321/projects/blockchain/ --zone us-central1-c
+gcloud compute scp signature.py bc-1:/home/n6321/projects/blockchain/ --zone us-central1-c
+gcloud compute scp verify_transaction.py bc-1:/home/n6321/projects/blockchain/ --zone us-central1-c
+gcloud compute scp memo.txt bc-1:/home/n6321/projects/blockchain/ --zone us-central1-c
 
-
-# ファイルを転送bc-2
-gcloud compute scp fast_api.py bc-2:/home/n6321/projects/blockchain/ --zone us-central1-c
+# ファイルを転送bc-2（pklファイルと個人の完璧メモを除く）
 gcloud compute scp blockchain.py bc-2:/home/n6321/projects/blockchain/ --zone us-central1-c
-gcloud compute scp requirements.txt bc-2:/home/n6321/projects/blockchain/ --zone us-central1-c
+gcloud compute scp fast_api.py bc-2:/home/n6321/projects/blockchain/ --zone us-central1-c
 gcloud compute scp main.py bc-2:/home/n6321/projects/blockchain/ --zone us-central1-c
 gcloud compute scp transaction.py bc-2:/home/n6321/projects/blockchain/ --zone us-central1-c
-gcloud compute scp signed_transaction.pkl bc-2:/home/n6321/projects/blockchain/ --zone us-central1-c
+gcloud compute scp requirements.txt bc-2:/home/n6321/projects/blockchain/ --zone us-central1-c
+gcloud compute scp get_transactions.py bc-2:/home/n6321/projects/blockchain/ --zone us-central1-c
+gcloud compute scp hash_test.py bc-2:/home/n6321/projects/blockchain/ --zone us-central1-c
+gcloud compute scp mining.py bc-2:/home/n6321/projects/blockchain/ --zone us-central1-c
+gcloud compute scp node_list.py bc-2:/home/n6321/projects/blockchain/ --zone us-central1-c
+gcloud compute scp post_transaction.py bc-2:/home/n6321/projects/blockchain/ --zone us-central1-c
+gcloud compute scp reuse_transactions.py bc-2:/home/n6321/projects/blockchain/ --zone us-central1-c
+gcloud compute scp show_accounts.py bc-2:/home/n6321/projects/blockchain/ --zone us-central1-c
+gcloud compute scp sign_transaction.py bc-2:/home/n6321/projects/blockchain/ --zone us-central1-c
+gcloud compute scp signature.py bc-2:/home/n6321/projects/blockchain/ --zone us-central1-c
+gcloud compute scp verify_transaction.py bc-2:/home/n6321/projects/blockchain/ --zone us-central1-c
+gcloud compute scp memo.txt bc-2:/home/n6321/projects/blockchain/ --zone us-central1-c
+
+ブラウザから開けない原因
+ファイヤーウォールルールの設定
+解決策：ファイヤーウォールルールを適切に設定する
+
+サーバーが再起動したせいで外部アドレスが変わった
+ブラウザのリロール
+or
+コマンドから外部アドレスを取得
+gcloud compute instances describe bc-1 --zone us-central1-c --format="get(networkInterfaces[0].accessConfigs[0].natIP)"
 
 
 
