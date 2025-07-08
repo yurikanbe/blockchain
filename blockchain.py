@@ -10,6 +10,8 @@ import requests
 from concurrent.futures import ThreadPoolExecutor
 
 POW_DIFFICULTY = 10
+POW_CHANGE_BLOCKNUM = 10
+POW_TARGET_SEC = 600
 REWARD_AMOUNT = 256
 TRANSACTION_FILE = "./transaction_data.pkl"
 BLOCKCHAIN_FILE = "./blockchain_data.pkl"
@@ -28,6 +30,7 @@ class Blockchain:
         self.chain["blocks"].append(self.first_block)
         self.all_block_transaction = []
         self.my_address = ""
+        self.current_pow_difficulty = POW_DIFFICULTY
 
     def save_transaction_pool(self):
         pd.to_pickle(self.transaction_pool, TRANSACTION_FILE)
@@ -88,6 +91,7 @@ class Blockchain:
 
     def verify_chain(self, chain):
         all_block_transactions = []
+        current_pow_difficulty = POW_DIFFICULTY
         for i in range(len(chain["blocks"])):
             block = chain["blocks"][i]
             
@@ -104,12 +108,8 @@ class Blockchain:
                     "hash": block["hash"],
                     "nonce": block["nonce"],
                 }
-                block_hash = self.hash(block_without_time)
-                binary_hash = format(int(block_hash, 16), '0256b')
-                suffix = binary_hash[-POW_DIFFICULTY:]
-                required_suffix = '0' * POW_DIFFICULTY
-                
-                if suffix != required_suffix:
+                current_pow_difficulty = self.get_pow_difficulty(chain["blocks"][:i], current_pow_difficulty)
+                if format(int(self.hash(block_without_time), 16), '0256b')[-current_pow_difficulty:] != '0'*current_pow_difficulty:
                     return False
                     
             reward_trans_fig = False
@@ -157,7 +157,8 @@ class Blockchain:
             "hash":hash,
             "nonce":0,
         }
-        while not format(int(self.hash(block_without_time),16),'0256b')[-POW_DIFFICULTY:] == '0'*POW_DIFFICULTY:
+        self.current_pow_difficulty = self.get_pow_difficulty(self.chain["blocks"], self.current_pow_difficulty)
+        while not format(int(self.hash(block_without_time), 16), '0256b')[-self.current_pow_difficulty:] == '0'*self.current_pow_difficulty:
             block_without_time["nonce"] += 1
         block = {
             "time":datetime.now(timezone.utc).isoformat(),
@@ -194,3 +195,15 @@ class Blockchain:
                 if url != self.my_address:
                     executor.submit(requests.post,
                     "http://"+url+":8000/receive_transaction", json.dumps(transaction))
+
+    def get_pow_difficulty(self, blocks, current_pow_difficulty):
+        ix = len(blocks)-1
+        if (ix-1) % POW_CHANGE_BLOCKNUM == 0 and 1 < ix:
+            all_time = 0
+            for i in range(POW_CHANGE_BLOCKNUM):
+                all_time += (datetime.fromisoformat(blocks[ix-1]["time"])-datetime.fromisoformat(blocks[ix-1-i]["time"])).total_seconds()
+            if all_time / POW_CHANGE_BLOCKNUM > POW_TARGET_SEC/2:
+                current_pow_difficulty += 1
+            if 1 < current_pow_difficulty and POW_TARGET_SEC * 2 < all_time / POW_CHANGE_BLOCKNUM:
+                current_pow_difficulty -= 1
+        return current_pow_difficulty
