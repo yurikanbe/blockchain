@@ -58,4 +58,15 @@ or
 gcloud compute instances describe bc-1 --zone us-central1-c --format="get(networkInterfaces[0].accessConfigs[0].natIP)"
 
 
+利用可能なユーザーを確認
+cat /etc/passwd | grep /bin/bash
 
+
+ユーザーを切り替える
+# 既存のユーザーに切り替え
+sudo su - [ユーザー名]
+
+# 例
+sudo su - n6321
+
+ssss
