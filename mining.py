@@ -2,6 +2,9 @@ import blockchain
 import requests
 import sys
 import json
+import node_list
+import concurrent.futures
+
 def http_get(path):
     res = requests.get(path)
     if res.status_code != 200:
@@ -15,6 +18,27 @@ if __name__=="__main__":
     # miner="3dff63e15d388046bd1fae2edc3b82ebc9054243bc214c510f14b2917452e1f07de1ee87bc076bfa0dfea1c88bd1eef6b059c4655f1dd4238f2d42a59abf96fa"#Dさん
     ip_address="130.211.213.169"
     blockchain = blockchain.Blockchain()
+
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        future_to_node = {executor.submit(requests.get,"http://"+node+":8000/chain") for node in node_list.node_list}
+        max_chain_len = 0
+        for future in concurrent.futures.as_completed(future_to_node):
+            node = future_to_node[future]
+            try:
+                temp_dict = future.result().json()
+                if blockchain.verify_chain(temp_dict):
+                    if max_chain_len < len(temp_dict["blocks"]):
+                        chain_dict = temp_dict
+                        ip_address = node
+                        max_chain_len = len(temp_dict["blocks"])
+            except Exception as exc:
+                print("%s generated an exception: %s" % (node, exc))
+    print("%s is selected .block length = %d" %(ip_address,len(chain_dict["blocks"])))
+
+
+
+
+
 
     res = http_get("http://"+ip_address+":8000/chain")
     chain_dict = res.json()
@@ -46,5 +70,15 @@ if __name__=="__main__":
 
     blockchain.create_new_block(miner)
     
-    res = requests.post("http://"+ip_address+":8000/chain",json=blockchain.chain)
-    print(res.text)
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        future_to_node ={executor.submit(requests.post,"http://"+node+":8000/chain",json=blockchain.chain) for node in node_list.node_list}
+        for future in concurrent.futures.as_completed(future_to_node):
+            node = future_to_node[future]
+            try:
+                print(node+":"+future.result().text)
+            except Exception as exc:
+                print("%s generated an exception: %s" % (node, exc))
+
+
+
+
