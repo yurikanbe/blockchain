@@ -1,0 +1,141 @@
+# NFT販売所 テーブル定義書
+
+## 1. ユーザーテーブル (users)
+
+| 項目名 | 物理名 | データ型 | 桁数 | NULL | PK | FK | デフォルト値 | 説明 |
+|--------|--------|----------|------|------|----|----|--------------|------|
+| ユーザーID | id | INTEGER | - | NOT NULL | ○ | - | AUTO_INCREMENT | 主キー |
+| ウォレットアドレス | wallet_address | VARCHAR | 42 | NOT NULL | - | - | - | Ethereumアドレス（0x...） |
+| ユーザー名 | username | VARCHAR | 50 | NULL | - | - | - | 表示名 |
+| メールアドレス | email | VARCHAR | 100 | NULL | - | - | - | 連絡先（任意） |
+| プロフィール画像URL | profile_image_url | VARCHAR | 500 | NULL | - | - | - | アバター画像 |
+| 登録日時 | created_at | TIMESTAMP | - | NOT NULL | - | - | CURRENT_TIMESTAMP | 作成日時 |
+| 更新日時 | updated_at | TIMESTAMP | - | NOT NULL | - | - | CURRENT_TIMESTAMP ON UPDATE | 更新日時 |
+
+**インデックス**
+- UNIQUE INDEX: wallet_address
+- INDEX: username
+
+---
+
+## 2. NFTテーブル (nfts)
+
+| 項目名 | 物理名 | データ型 | 桁数 | NULL | PK | FK | デフォルト値 | 説明 |
+|--------|--------|----------|------|------|----|----|--------------|------|
+| NFT ID | id | INTEGER | - | NOT NULL | ○ | - | AUTO_INCREMENT | 主キー |
+| トークンID | token_id | INTEGER | - | NULL | - | - | - | ブロックチェーン上のID |
+| コントラクトアドレス | contract_address | VARCHAR | 42 | NULL | - | - | - | スマートコントラクトアドレス |
+| NFT名 | name | VARCHAR | 100 | NOT NULL | - | - | - | 作品名 |
+| 説明 | description | TEXT | - | NULL | - | - | - | 作品の説明文 |
+| 画像URL | image_url | VARCHAR | 500 | NULL | - | - | - | 作品画像のURL |
+| 所有者ID | owner_id | INTEGER | - | NOT NULL | - | ○ | - | users.id |
+| 作成者ID | creator_id | INTEGER | - | NOT NULL | - | ○ | - | users.id |
+| カテゴリ | category | VARCHAR | 50 | NULL | - | - | - | アート、ゲーム、音楽など |
+| ステータス | status | VARCHAR | 20 | NOT NULL | - | - | 'draft' | draft/minted/listed/sold |
+| 作成日時 | created_at | TIMESTAMP | - | NOT NULL | - | - | CURRENT_TIMESTAMP | 作成日時 |
+| 更新日時 | updated_at | TIMESTAMP | - | NOT NULL | - | - | CURRENT_TIMESTAMP ON UPDATE | 更新日時 |
+
+**インデックス**
+- INDEX: owner_id
+- INDEX: creator_id
+- INDEX: status
+- INDEX: category
+- UNIQUE INDEX: contract_address, token_id
+
+**外部キー制約**
+- owner_id → users.id
+- creator_id → users.id
+
+---
+
+## 3. 出品テーブル (listings)
+
+| 項目名 | 物理名 | データ型 | 桁数 | NULL | PK | FK | デフォルト値 | 説明 |
+|--------|--------|----------|------|------|----|----|--------------|------|
+| 出品ID | id | INTEGER | - | NOT NULL | ○ | - | AUTO_INCREMENT | 主キー |
+| NFT ID | nft_id | INTEGER | - | NOT NULL | - | ○ | - | nfts.id |
+| 出品者ID | seller_id | INTEGER | - | NOT NULL | - | ○ | - | users.id |
+| 価格 | price | DECIMAL | 18,8 | NOT NULL | - | - | - | 販売価格 |
+| 通貨 | currency | VARCHAR | 10 | NOT NULL | - | - | 'ETH' | ETH/MATIC/USDCなど |
+| ステータス | status | VARCHAR | 20 | NOT NULL | - | - | 'active' | active/sold/cancelled |
+| 出品日時 | listed_at | TIMESTAMP | - | NOT NULL | - | - | CURRENT_TIMESTAMP | 出品日時 |
+| 売却日時 | sold_at | TIMESTAMP | - | NULL | - | - | - | 売却完了日時 |
+| 更新日時 | updated_at | TIMESTAMP | - | NOT NULL | - | - | CURRENT_TIMESTAMP ON UPDATE | 更新日時 |
+
+**インデックス**
+- INDEX: nft_id
+- INDEX: seller_id
+- INDEX: status
+- INDEX: price
+- INDEX: listed_at
+
+**外部キー制約**
+- nft_id → nfts.id
+- seller_id → users.id
+
+---
+
+## 4. 取引履歴テーブル (transactions)
+
+| 項目名 | 物理名 | データ型 | 桁数 | NULL | PK | FK | デフォルト値 | 説明 |
+|--------|--------|----------|------|------|----|----|--------------|------|
+| 取引ID | id | INTEGER | - | NOT NULL | ○ | - | AUTO_INCREMENT | 主キー |
+| NFT ID | nft_id | INTEGER | - | NOT NULL | - | ○ | - | nfts.id |
+| 購入者ID | buyer_id | INTEGER | - | NOT NULL | - | ○ | - | users.id |
+| 出品者ID | seller_id | INTEGER | - | NOT NULL | - | ○ | - | users.id |
+| 価格 | price | DECIMAL | 18,8 | NOT NULL | - | - | - | 取引価格 |
+| 通貨 | currency | VARCHAR | 10 | NOT NULL | - | - | 'ETH' | 取引通貨 |
+| トランザクションハッシュ | transaction_hash | VARCHAR | 66 | NULL | - | - | - | ブロックチェーン上のtxハッシュ |
+| 取引日時 | transaction_date | TIMESTAMP | - | NOT NULL | - | - | CURRENT_TIMESTAMP | 取引完了日時 |
+
+**インデックス**
+- INDEX: nft_id
+- INDEX: buyer_id
+- INDEX: seller_id
+- INDEX: transaction_date
+- UNIQUE INDEX: transaction_hash
+
+**外部キー制約**
+- nft_id → nfts.id
+- buyer_id → users.id
+- seller_id → users.id
+
+---
+
+## 5. お気に入りテーブル (favorites) ※任意
+
+| 項目名 | 物理名 | データ型 | 桁数 | NULL | PK | FK | デフォルト値 | 説明 |
+|--------|--------|----------|------|------|----|----|--------------|------|
+| お気に入りID | id | INTEGER | - | NOT NULL | ○ | - | AUTO_INCREMENT | 主キー |
+| ユーザーID | user_id | INTEGER | - | NOT NULL | - | ○ | - | users.id |
+| NFT ID | nft_id | INTEGER | - | NOT NULL | - | ○ | - | nfts.id |
+| 登録日時 | created_at | TIMESTAMP | - | NOT NULL | - | - | CURRENT_TIMESTAMP | 登録日時 |
+
+**インデックス**
+- UNIQUE INDEX: user_id, nft_id
+- INDEX: user_id
+- INDEX: nft_id
+
+**外部キー制約**
+- user_id → users.id
+- nft_id → nfts.id
+
+---
+
+## 6. カテゴリマスタテーブル (categories) ※任意
+
+| 項目名 | 物理名 | データ型 | 桁数 | NULL | PK | FK | デフォルト値 | 説明 |
+|--------|--------|----------|------|------|----|----|--------------|------|
+| カテゴリID | id | INTEGER | - | NOT NULL | ○ | - | AUTO_INCREMENT | 主キー |
+| カテゴリ名 | name | VARCHAR | 50 | NOT NULL | - | - | - | カテゴリ名 |
+| 説明 | description | TEXT | - | NULL | - | - | - | カテゴリの説明 |
+| 表示順 | sort_order | INTEGER | - | NOT NULL | - | - | 0 | 表示順序 |
+| 有効フラグ | is_active | BOOLEAN | - | NOT NULL | - | - | true | 有効/無効 |
+
+    **インデックス**
+- UNIQUE INDEX: name
+- INDEX: sort_order
+
+---
+
+## データベース作成SQL例
