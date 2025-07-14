@@ -1,0 +1,12 @@
+[Unit]
+Description=exec by systemd
+After=network.target
+
+[Service]
+Restart=always
+Type=simple
+WorkingDirectory=/home/ec2-user
+ExecStart=/usr/bin/python3 /home/ec2-user/main.py
+
+[Install]
+WantedBy=multi-user.target

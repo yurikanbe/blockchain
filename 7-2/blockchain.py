@@ -1,4 +1,4 @@
-from ecdsa import BadSignatureError, VerifyingKey, SECP256k1
+from ecdsa import VerifyingKey, BadSignatureError, SECP256k1
 import binascii
 import json
 import pandas as pd
@@ -6,8 +6,10 @@ import os
 import hashlib
 from datetime import datetime, timezone
 import node_list
-import requests 
+import requests
 from concurrent.futures import ThreadPoolExecutor
+import multiprocessing
+multiprocessing.set_start_method('spawn', force=True)
 
 POW_DIFFICULTY_ORIGIN = 18
 POW_CHANGE_BLOCK_NUM = 10
@@ -36,21 +38,25 @@ class BlockChain(object):
         pd.to_pickle(self.transaction_pool, TRANSACTION_FILE)
 
     def load_transaction_pool(self):
-        if os.path.exists(TRANSACTION_FILE):
+        if os.path.isfile(TRANSACTION_FILE):
             transaction_data = pd.read_pickle(TRANSACTION_FILE)
             return transaction_data
         else:
             return {"transactions": []}
-
+        
     def add_transaction_pool(self, transaction):
         if (transaction not in self.all_block_transactions) and (transaction not in self.transaction_pool["transactions"]):
             self.transaction_pool["transactions"].append(transaction)
             return True
         else:
             return False
-
+        
     def verify_transaction(self, transaction):
         if transaction["amount"] < 0:
+            return False
+        if transaction["amount"] != 0 and (transaction["nft_data"] != "" or transaction["nft_origin"] != ""):
+            return False
+        if transaction["amount"] == 0 and ((transaction["nft_data"] == "") == (transaction["nft_origin"] == "") or 10000 < len(transaction["nft_data"])):
             return False
         public_key = VerifyingKey.from_string(binascii.unhexlify(transaction["sender"]), curve=SECP256k1)
         signature = binascii.unhexlify(transaction["signature"])
@@ -58,14 +64,16 @@ class BlockChain(object):
             "time": transaction["time"],
             "sender": transaction["sender"],
             "receiver": transaction["receiver"],
-            "amount": transaction["amount"]
+            "amount": transaction["amount"],
+            "nft_data": transaction["nft_data"],
+            "nft_origin": transaction["nft_origin"]
         }
         try:
             flg = public_key.verify(signature, json.dumps(unsigned_transaction).encode('utf-8'))
             return flg
         except BadSignatureError:
             return False
-
+        
     def hash(self, block):
         hash = hashlib.sha256(json.dumps(block).encode('utf-8')).hexdigest()
         return hash
@@ -91,6 +99,7 @@ class BlockChain(object):
 
     def verify_chain(self, chain):
         all_block_transactions = []
+        for_verify_transaction = []
         current_pow_difficulty = POW_DIFFICULTY_ORIGIN
         for i in range(len(chain["blocks"])):
             block = chain["blocks"][i]
@@ -119,74 +128,76 @@ class BlockChain(object):
                         if transaction["amount"] != self.get_reward(i):
                             return False
                     else:
-                        if self.verify_transaction(transaction) == False:
-                            return False
+                        for_verify_transaction.append(transaction)
                     if transaction not in all_block_transactions:
                         all_block_transactions.append(transaction)
                     else:
                         return False
+        with multiprocessing.Pool() as pool:
+            vtr = pool.map(self.verify_transaction, for_verify_transaction)
+        if False in vtr:
+            return False   
         if all_block_transactions != []:
             if min(self.account_calc(all_block_transactions).values()) < 0:
                 return False
+            if self.nft_calc(all_block_transactions) == False:
+                return False
         self.current_pow_difficulty = current_pow_difficulty
         return True
-
+          
     def replace_chain(self, chain):       
         self.chain = chain
         self.set_all_block_transactions()
         for transaction in self.all_block_transactions:
             if transaction in self.transaction_pool["transactions"]:
                 self.transaction_pool["transactions"].remove(transaction)
-    
+
     def create_new_block(self, miner):
         reward_transaction = {
-            "time":datetime.now(timezone.utc).isoformat(),
-            "sender":"Blockchain",
-            "receiver":miner,
-            "amount":self.get_reward(len(self.chain["blocks"])),
-            "signature":"none"
+            "time": datetime.now(timezone.utc).isoformat(),
+            "sender": "Blockchain",
+            "receiver": miner,
+            "amount": self.get_reward(len(self.chain["blocks"])),
+            "nft_data": "",
+            "nft_origin": "",
+            "signature": "none"
         }
-        transaction = self.transaction_pool["transactions"].copy()
-        transaction.append(reward_transaction)
+        transactions = self.transaction_pool["transactions"].copy()
+        transactions.append(reward_transaction)
         last_block = self.chain["blocks"][-1]
         hash = self.hash(last_block)
         block_without_time = {
-            "transactions":transaction,
-            "hash":hash,
-            "nonce":0,
+            "transactions": transactions,
+            "hash": hash,
+            "nonce": 0
         }
         self.current_pow_difficulty = self.get_pow_difficulty(self.chain["blocks"], self.current_pow_difficulty)
-        while not format(int(self.hash(block_without_time), 16), '0256b')[-self.current_pow_difficulty:] == '0'*self.current_pow_difficulty:
+        while not format(int(self.hash(block_without_time),16),"0256b")[-self.current_pow_difficulty:] == '0'*self.current_pow_difficulty:
             block_without_time["nonce"] += 1
         block = {
-            "time":datetime.now(timezone.utc).isoformat(),
-            "transactions":block_without_time["transactions"],
-            "hash":block_without_time["hash"],
-            "nonce":block_without_time["nonce"],
+            "time": datetime.now(timezone.utc).isoformat(),
+            "transactions": block_without_time["transactions"],
+            "hash": block_without_time["hash"],
+            "nonce": block_without_time["nonce"]
         }
         self.chain["blocks"].append(block)
 
-
-    def account_calc(self,transactions):
-        accounts={}
+    def account_calc(self, transactions):
+        accounts = {}
         transactions_copy = transactions.copy()
         for transaction in transactions_copy:
-            # sender側の計算（Blockchainの場合はスキップ）
             if transaction["sender"] != "Blockchain":
                 if transaction["sender"] not in accounts:
                     accounts[transaction["sender"]] = int(0)
                 accounts[transaction["sender"]] -= int(transaction["amount"])
-            
-            # receiver側の計算（すべてのトランザクションで実行）
             if transaction["receiver"] not in accounts:
                 accounts[transaction["receiver"]] = int(0)
             accounts[transaction["receiver"]] += int(transaction["amount"])
         return accounts
     
     def get_my_address(self):
-        headers = {'Metadata-Flavor': 'Google'}
-        self.my_address = requests.get("http://metadata.google.internal/computeMetadata/v1/instance/network-interfaces/0/access-configs/0/external-ip", headers=headers).text
-
+        self.my_address = requests.get("http://169.254.169.254/latest/meta-data/public-ipv4").text
+    
     def broadcast_transaction(self, transaction):
         with ThreadPoolExecutor() as executor:
             for url in node_list.Node_List:
@@ -210,3 +221,21 @@ class BlockChain(object):
         if reward < 1:
             reward = 1
         return reward
+    
+    def nft_calc(self, transactions):
+        nft_holder = {}
+        useless_nft_flg = False
+        transactions_copy = transactions.copy()
+        for transaction in transactions_copy:
+            if transaction["amount"] == 0:
+                nft_hash = self.hash(transaction)
+                if transaction["nft_origin"] == "" and transaction["nft_data"] != "" and (nft_hash not in nft_holder):
+                    nft_holder[nft_hash] = transaction["receiver"]
+                elif nft_holder.get(transaction["nft_origin"]) == transaction["sender"] and transaction["nft_data"] == "":
+                    nft_holder[transaction["nft_origin"]] = transaction["receiver"]
+                else:
+                    transactions.remove(transaction)
+                    useless_nft_flg = True
+        if useless_nft_flg:
+            return False
+        return nft_holder

@@ -1,4 +1,4 @@
-from ecdsa import BadSignatureError, VerifyingKey, SECP256k1
+from ecdsa import VerifyingKey, BadSignatureError, SECP256k1
 import binascii
 import json
 import pandas as pd
@@ -6,14 +6,11 @@ import os
 import hashlib
 from datetime import datetime, timezone
 import node_list
-import requests 
+import requests
 from concurrent.futures import ThreadPoolExecutor
 
-POW_DIFFICULTY_ORIGIN = 18
-POW_CHANGE_BLOCK_NUM = 10
-POW_TARGET_SEC = 10
-REWARD_AMOUNT_ORIGIN = 256
-REWARD_CHANGE_BLOCK_NUM = 10
+POW_DIFFICULTY = 10
+REWARD_AMOUNT = 256
 TRANSACTION_FILE = "./transaction_data.pkl"
 BLOCKCHAIN_FILE = "./chain_data.pkl"
 
@@ -30,25 +27,24 @@ class BlockChain(object):
         self.chain["blocks"].append(self.first_block)
         self.all_block_transactions = []
         self.my_address = ""
-        self.current_pow_difficulty = POW_DIFFICULTY_ORIGIN
 
     def save_transaction_pool(self):
         pd.to_pickle(self.transaction_pool, TRANSACTION_FILE)
 
     def load_transaction_pool(self):
-        if os.path.exists(TRANSACTION_FILE):
+        if os.path.isfile(TRANSACTION_FILE):
             transaction_data = pd.read_pickle(TRANSACTION_FILE)
             return transaction_data
         else:
             return {"transactions": []}
-
+        
     def add_transaction_pool(self, transaction):
         if (transaction not in self.all_block_transactions) and (transaction not in self.transaction_pool["transactions"]):
             self.transaction_pool["transactions"].append(transaction)
             return True
         else:
             return False
-
+        
     def verify_transaction(self, transaction):
         if transaction["amount"] < 0:
             return False
@@ -65,7 +61,7 @@ class BlockChain(object):
             return flg
         except BadSignatureError:
             return False
-
+        
     def hash(self, block):
         hash = hashlib.sha256(json.dumps(block).encode('utf-8')).hexdigest()
         return hash
@@ -91,7 +87,6 @@ class BlockChain(object):
 
     def verify_chain(self, chain):
         all_block_transactions = []
-        current_pow_difficulty = POW_DIFFICULTY_ORIGIN
         for i in range(len(chain["blocks"])):
             block = chain["blocks"][i]
             previous_block = chain["blocks"][i-1]
@@ -106,8 +101,7 @@ class BlockChain(object):
                     "hash": block["hash"],
                     "nonce": block["nonce"]
                 }
-                current_pow_difficulty = self.get_pow_difficulty(chain["blocks"][:i], current_pow_difficulty)
-                if format(int(self.hash(block_without_time),16),"0256b")[-current_pow_difficulty:] != '0'*current_pow_difficulty:
+                if format(int(self.hash(block_without_time),16),"0256b")[-POW_DIFFICULTY:] != '0'*POW_DIFFICULTY:
                     return False
                 reward_trans_flg = False
                 for transaction in block["transactions"]:
@@ -116,7 +110,7 @@ class BlockChain(object):
                              reward_trans_flg = True
                         else:
                             return False
-                        if transaction["amount"] != self.get_reward(i):
+                        if transaction["amount"] != REWARD_AMOUNT:
                             return False
                     else:
                         if self.verify_transaction(transaction) == False:
@@ -128,85 +122,51 @@ class BlockChain(object):
         if all_block_transactions != []:
             if min(self.account_calc(all_block_transactions).values()) < 0:
                 return False
-        self.current_pow_difficulty = current_pow_difficulty
         return True
-
+          
     def replace_chain(self, chain):       
         self.chain = chain
         self.set_all_block_transactions()
         for transaction in self.all_block_transactions:
             if transaction in self.transaction_pool["transactions"]:
                 self.transaction_pool["transactions"].remove(transaction)
-    
+
     def create_new_block(self, miner):
         reward_transaction = {
-            "time":datetime.now(timezone.utc).isoformat(),
-            "sender":"Blockchain",
-            "receiver":miner,
-            "amount":self.get_reward(len(self.chain["blocks"])),
-            "signature":"none"
+            "time": datetime.now(timezone.utc).isoformat(),
+            "sender": "Blockchain",
+            "receiver": miner,
+            "amount": REWARD_AMOUNT,
+            "signature": "none"
         }
-        transaction = self.transaction_pool["transactions"].copy()
-        transaction.append(reward_transaction)
+        transactions = self.transaction_pool["transactions"].copy()
+        transactions.append(reward_transaction)
         last_block = self.chain["blocks"][-1]
         hash = self.hash(last_block)
         block_without_time = {
-            "transactions":transaction,
-            "hash":hash,
-            "nonce":0,
+            "transactions": transactions,
+            "hash": hash,
+            "nonce": 0
         }
-        self.current_pow_difficulty = self.get_pow_difficulty(self.chain["blocks"], self.current_pow_difficulty)
-        while not format(int(self.hash(block_without_time), 16), '0256b')[-self.current_pow_difficulty:] == '0'*self.current_pow_difficulty:
+        while not format(int(self.hash(block_without_time),16),"0256b")[-POW_DIFFICULTY:] == '0'*POW_DIFFICULTY:
             block_without_time["nonce"] += 1
         block = {
-            "time":datetime.now(timezone.utc).isoformat(),
-            "transactions":block_without_time["transactions"],
-            "hash":block_without_time["hash"],
-            "nonce":block_without_time["nonce"],
+            "time": datetime.now(timezone.utc).isoformat(),
+            "transactions": block_without_time["transactions"],
+            "hash": block_without_time["hash"],
+            "nonce": block_without_time["nonce"]
         }
         self.chain["blocks"].append(block)
 
-
-    def account_calc(self,transactions):
-        accounts={}
+    def account_calc(self, transactions):
+        accounts = {}
         transactions_copy = transactions.copy()
         for transaction in transactions_copy:
-            # sender側の計算（Blockchainの場合はスキップ）
             if transaction["sender"] != "Blockchain":
                 if transaction["sender"] not in accounts:
                     accounts[transaction["sender"]] = int(0)
                 accounts[transaction["sender"]] -= int(transaction["amount"])
-            
-            # receiver側の計算（すべてのトランザクションで実行）
             if transaction["receiver"] not in accounts:
                 accounts[transaction["receiver"]] = int(0)
             accounts[transaction["receiver"]] += int(transaction["amount"])
         return accounts
-    
-    def get_my_address(self):
-        headers = {'Metadata-Flavor': 'Google'}
-        self.my_address = requests.get("http://metadata.google.internal/computeMetadata/v1/instance/network-interfaces/0/access-configs/0/external-ip", headers=headers).text
-
-    def broadcast_transaction(self, transaction):
-        with ThreadPoolExecutor() as executor:
-            for url in node_list.Node_List:
-                if url != self.my_address:
-                    executor.submit(requests.post, "http://"+url+":8000/receive_transaction", json.dumps(transaction))
-
-    def get_pow_difficulty(self, blocks, current_pow_difficulty):
-        ix = len(blocks) - 1
-        if (ix-1) % POW_CHANGE_BLOCK_NUM == 0 and 1 < ix:
-            all_time = 0
-            for i in range(POW_CHANGE_BLOCK_NUM):
-                all_time += (datetime.fromisoformat(blocks[ix-i]["time"]) - datetime.fromisoformat(blocks[ix-i-1]["time"])).total_seconds()
-            if all_time / POW_CHANGE_BLOCK_NUM < POW_TARGET_SEC / 2:
-                current_pow_difficulty += 1
-            if 1 < current_pow_difficulty and POW_TARGET_SEC * 2 < all_time / POW_CHANGE_BLOCK_NUM:
-                current_pow_difficulty -= 1
-        return current_pow_difficulty
-    
-    def get_reward(self, ix):
-        reward = REWARD_AMOUNT_ORIGIN // 2**((ix-1) // REWARD_CHANGE_BLOCK_NUM)
-        if reward < 1:
-            reward = 1
-        return reward
