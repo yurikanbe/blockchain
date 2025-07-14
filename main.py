@@ -28,10 +28,10 @@ class Chain(BaseModel):
     blocks: List[Block]
 
 
-blockchain=blockchain.Blockchain()
+blockchain=blockchain.BlockChain()
 blockchain.transaction_pool = blockchain.load_transaction_pool()
 blockchain.chain = blockchain.load_blockchain()
-blockchain.set_all_block_transaction()
+blockchain.set_all_block_transactions()
 blockchain.get_my_address()
 app=FastAPI()
 
